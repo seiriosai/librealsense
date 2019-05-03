@@ -1,5 +1,5 @@
 message(STATUS "Checking internet connection...")
-file(DOWNLOAD "http://realsense-hw-public.s3-eu-west-1.amazonaws.com/Releases/connectivity_check" "${CMAKE_CURRENT_SOURCE_DIR}/connectivity_check" SHOW_PROGRESS TIMEOUT 5 STATUS status)
+file(DOWNLOAD "http://aws.seiriosai.com:3000/pkgs/TM2/connectivity_check" "${CMAKE_CURRENT_SOURCE_DIR}/connectivity_check" SHOW_PROGRESS TIMEOUT 5 STATUS status)
 list (FIND status "\"No error\"" _index)
 if (${_index} EQUAL -1)
     message(STATUS "Failed to identify Internet connection, disabling BUILD_WITH_TM2")
