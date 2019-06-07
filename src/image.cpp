@@ -12,6 +12,26 @@
 #include <tmmintrin.h> // For SSSE3 intrinsics
 #endif
 
+#if defined (ANDROID)
+//#define ARM_NEON_ENABLE
+//#include"yuv2rgb.h"
+#include "sse2neon.h"
+inline __m128i _mm_shuffle_epi8(__m128i ia, __m128i ib)
+{
+#define uint8x16_to_8x8x2(v) ((uint8x8x2_t) { vget_low_u8(v), vget_high_u8(v) })
+
+	uint8x8_t b_h = vget_high_u8(vreinterpretq_u8_s32(ib));
+	uint8x8_t b_l = vget_low_u8(vreinterpretq_u8_s32(ib));
+	uint8x8_t lut_h = vtbl2_u8(*(uint8x8x2_t*)&ia, b_h);
+	uint8x8_t lut_l = vtbl2_u8(*(uint8x8x2_t*)&ia, b_l);
+	uint8x16_t lut = vcombine_u8(lut_l, lut_h);
+
+	return vreinterpretq_s32_u8(lut);
+}
+
+
+#endif
+
 #if defined (ANDROID) || (defined (__linux__) && !defined (__x86_64__))
 
 bool has_avx() { return false; }
@@ -345,7 +365,9 @@ namespace librealsense
 #ifdef RS2_USE_CUDA
         rscuda::unpack_yuy2_cuda<FORMAT>(d, s, n);
 #endif
-#if defined __SSSE3__ && ! defined ANDROID
+//#if defined __SSSE3__ && ! defined ANDROID
+#if defined __SSSE3__ && defined ANDROID
+
         static bool do_avx = has_avx();
         #ifdef __AVX2__
 
@@ -505,9 +527,11 @@ namespace librealsense
                 }
             }
         }
-#else  // Generic code for when SSSE3 is not available.
+
+#else
         auto src = reinterpret_cast<const uint8_t *>(s);
         auto dst = reinterpret_cast<uint8_t *>(d[0]);
+#pragma omp parallel for
         for (; n; n -= 16, src += 32)
         {
             if (FORMAT == RS2_FORMAT_Y8)
@@ -555,6 +579,7 @@ namespace librealsense
             };
 
             uint8_t r[16], g[16], b[16];
+#pragma omp parallel for
             for (int i = 0; i < 16; i++)
             {
                 int32_t c = y[i] - 16;
